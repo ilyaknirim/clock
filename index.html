@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Часы на Arduino — проект</title>
+    <style>
+      :root {
+        --bg: #0f1115;
+        --panel: #171a21;
+        --panel2: #1e222b;
+        --line: #2a2f3a;
+        --text: #e6e8ee;
+        --muted: #9aa3b2;
+        --accent: #4ea1ff;
+        --ok: #37c978;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.55;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          Arial,
+          sans-serif;
+      }
+      .wrap {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 0 16px;
+      }
+
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: rgba(15, 17, 21, 0.94);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--line);
+      }
+      .top {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 0;
+      }
+      .top h1 {
+        font-size: 17px;
+        margin: 0;
+        flex: 1;
+      }
+      .btn {
+        background: var(--panel2);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .btn:hover {
+        border-color: var(--accent);
+      }
+      .bar {
+        height: 8px;
+        background: var(--panel2);
+        border-radius: 99px;
+        overflow: hidden;
+      }
+      .bar > i {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: linear-gradient(90deg, var(--accent), var(--ok));
+        transition: width 0.25s;
+      }
+      .pinfo {
+        font-size: 13px;
+        color: var(--muted);
+        padding: 8px 0 12px;
+      }
+      nav {
+        display: none;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding-bottom: 12px;
+      }
+      nav.open {
+        display: flex;
+      }
+      nav a {
+        font-size: 13px;
+        color: var(--muted);
+        text-decoration: none;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 4px 8px;
+      }
+      nav a:hover {
+        color: var(--text);
+        border-color: var(--accent);
+      }
+
+      main {
+        padding: 20px 0 60px;
+      }
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        margin-bottom: 14px;
+        overflow: hidden;
+      }
+      section > h2 {
+        margin: 0;
+        padding: 12px 14px;
+        font-size: 15px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        user-select: none;
+      }
+      section > h2 .chev {
+        color: var(--muted);
+        transition: transform 0.2s;
+      }
+      section.collapsed > h2 .chev {
+        transform: rotate(-90deg);
+      }
+      .body {
+        padding: 0 14px 14px;
+      }
+      section.collapsed .body {
+        display: none;
+      }
+
+      ul.check {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      ul.check li {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 7px 0;
+        border-bottom: 1px dashed var(--line);
+      }
+      ul.check li:last-child {
+        border-bottom: none;
+      }
+      ul.check input {
+        flex: none;
+        width: 16px;
+        height: 16px;
+        margin-top: 3px;
+        accent-color: var(--ok);
+        cursor: pointer;
+      }
+      ul.check label {
+        cursor: pointer;
+      }
+      li.done label {
+        color: var(--muted);
+        text-decoration: line-through;
+      }
+
+      p,
+      ul.plain {
+        margin: 0 0 10px;
+      }
+      ul.plain {
+        padding-left: 20px;
+      }
+      .tag {
+        display: inline-block;
+        font-size: 12px;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 1px 6px;
+        margin-right: 6px;
+      }
+      code {
+        background: var(--panel2);
+        padding: 1px 5px;
+        border-radius: 5px;
+        font-size: 13px;
+      }
+      .note {
+        color: var(--muted);
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <div class="top">
+          <h1>🕰 Часы на Arduino — проект</h1>
+          <button class="btn" id="menuBtn">☰ Меню</button>
+          <button class="btn" id="allBtn">Развернуть всё</button>
+          <button class="btn" id="resetBtn">Сброс</button>
+        </div>
+        <div class="bar"><i id="barFill"></i></div>
+        <div class="pinfo" id="pinfo">Выполнено 0 из 0</div>
+        <nav id="nav">
+          <a href="#tz">ТЗ</a>
+          <a href="#parts">Компоненты</a>
+          <a href="#plan">План</a>
+          <a href="#d3">3D / Tinkercad</a>
+          <a href="#wires">Провода и схема</a>
+          <a href="#code">Код</a>
+          <a href="#build">Сборка</a>
+          <a href="#test">Тесты</a>
+          <a href="#notes">Заметки</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap" id="main">
+      <!-- ТЗ -->
+      <section id="tz">
+        <h2><span class="chev">▾</span> 1. Техническое задание</h2>
+        <div class="body">
+          <p>
+            <b>Цель:</b> стрелочные часы на Arduino, время от модуля RTC,
+            автономное питание.
+          </p>
+          <p>
+            <b>Функции:</b> точное время, обновление стрелок раз в минуту,
+            сохранение времени при отключении питания, калибровка нуля.
+          </p>
+          <ul class="check">
+            <li>
+              <input type="checkbox" id="c1" data-id="tz1" /><label for="c1"
+                >Определены размеры корпуса и расположение циферблата</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c2" data-id="tz2" /><label for="c2"
+                >Зафиксирован состав компонентов и их модели</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c3" data-id="tz3" /><label for="c3"
+                >Определено целевое время автономной работы</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c4" data-id="tz4" /><label for="c4"
+                >Сформулированы критерии готовности устройства</label
+              >
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Компоненты -->
+      <section id="parts">
+        <h2><span class="chev">▾</span> 2. Компоненты</h2>
+        <div class="body">
+          <ul class="plain">
+            <li>Arduino Nano / Uno — 1 шт.</li>
+            <li>Модуль RTC DS3231 (+ CR2032) — 1 шт.</li>
+            <li>
+              Сервоприводы SG90/MG90S — 2 шт. (часовая и минутная стрелки)
+            </li>
+            <li>Провода dupont, макетная плата, припой/термоусадка</li>
+            <li>Батарейный отсек / БП, выключатель питания</li>
+            <li>Корпус (3D-печать), стрелки, крепёж</li>
+          </ul>
+          <ul class="check">
+            <li>
+              <input type="checkbox" id="c5" data-id="p1" /><label
+                for="p5"
+              ></label
+              ><label for="c5">Все компоненты куплены / найдены</label>
+            </li>
+            <li>
+              <input type="checkbox" id="c6" data-id="p2" /><label for="c6"
+                >Проверено напряжение питания сервоприводов</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c7" data-id="p3" /><label for="c7"
+                >Есть запасная батарейка CR2032 для RTC</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c8" data-id="p4" /><label for="c8"
+                >Подготовлены инструменты (паяльник, кусачки, мультиметр)</label
+              >
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- План -->
+      <section id="plan">
+        <h2><span class="chev">▾</span> 3. План разработки</h2>
+        <div class="body">
+          <ul class="check">
+            <li>
+              <input type="checkbox" id="c9" data-id="pl1" /><label for="c9"
+                >Этап 1 — эскиз и 3D-модель</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c10" data-id="pl2" /><label for="c10"
+                >Этап 2 — подбор компонентов и схема соединений</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c11" data-id="pl3" /><label for="c11"
+                >Этап 3 — провода, длины, макет</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c12" data-id="pl4" /><label for="c12"
+                >Этап 4 — программирование и отладка</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c13" data-id="pl5" /><label for="c13"
+                >Этап 5 — сборка в корпус</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c14" data-id="pl6" /><label for="c14"
+                >Этап 6 — тестирование</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c15" data-id="pl7" /><label for="c15"
+                >Этап 7 — доработка и финализация</label
+              >
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 3D -->
+      <section id="d3">
+        <h2><span class="chev">▾</span> 4. Эскиз и 3D (Tinkercad)</h2>
+        <div class="body">
+          <ul class="check">
+            <li>
+              <input type="checkbox" id="c16" data-id="d1" /><label for="c16"
+                >Нарисован эскиз от руки (вид спереди и сбоку)</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c17" data-id="d2" /><label for="c17"
+                >Определены посадочные места платы, RTC и батареи</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c18" data-id="d3" /><label for="c18"
+                >Смоделирован корпус в Tinkercad</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c19" data-id="d4" /><label for="c19"
+                >Проверены габариты и зазоры в модели</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c20" data-id="d5" /><label for="c20"
+                >Модель подготовлена к печати (экспорт STL)</label
+              >
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Провода -->
+      <section id="wires">
+        <h2><span class="chev">▾</span> 5. Провода и схема</h2>
+        <div class="body">
+          <p class="note">
+            Ориентир: серво — сигнал на D9/D10, питание 5 В, земля общая; RTC —
+            I2C (A4/A5 у Nano, SDA/SCL у Uno).
+          </p>
+          <ul class="check">
+            <li>
+              <input type="checkbox" id="c21" data-id="w1" /><label for="c21"
+                >Составлена схема соединений (пины, питание, земля)</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c22" data-id="w2" /><label for="c22"
+                >Замерены нужные длины проводов по корпусу</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c23" data-id="w3" /><label for="c23"
+                >Лишние провода укорочены и промаркированы</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c24" data-id="w4" /><label for="c24"
+                >Схема собрана на макетной плате</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c25" data-id="w5" /><label for="c25"
+                >Проверено питание мультиметром</label
+              >
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Код -->
+      <section id="code">
+        <h2><span class="chev">▾</span> 6. Код и прошивка</h2>
+        <div class="body">
+          <ul class="check">
+            <li>
+              <input type="checkbox" id="c26" data-id="k1" /><label for="c26"
+                >Установлены библиотеки <code>RTClib</code> и
+                <code>Servo</code></label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c27" data-id="k2" /><label for="c27"
+                >Сгенерирован черновой скетч с помощью ИИ</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c28" data-id="k3" /><label for="c28"
+                >Проверено чтение времени с RTC</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c29" data-id="k4" /><label for="c29"
+                >Реализована калибровка нулевого положения стрелок</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c30" data-id="k5" /><label for="c30"
+                >Обработан переход минут 59 → 00 (без рывка)</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c31" data-id="k6" /><label for="c31"
+                >Код вручную доработан и прокомментирован</label
+              >
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Сборка -->
+      <section id="build">
+        <h2><span class="chev">▾</span> 7. Сборка</h2>
+        <div class="body">
+          <ul class="check">
+            <li>
+              <input type="checkbox" id="c32" data-id="b1" /><label for="c32"
+                >Компоненты закреплены в корпусе</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c33" data-id="b2" /><label for="c33"
+                >Стрелки установлены с учётом калибровки</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c34" data-id="b3" /><label for="c34"
+                >Корпус закрыт, доступ к питанию и сбросу сохранён</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c35" data-id="b4" /><label for="c35"
+                >Провода не натянуты и не мешают движению стрелок</label
+              >
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Тесты -->
+      <section id="test">
+        <h2><span class="chev">▾</span> 8. Тестирование</h2>
+        <div class="body">
+          <ul class="check">
+            <li>
+              <input type="checkbox" id="c36" data-id="t1" /><label for="c36"
+                >Проверка точности хода за сутки</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c37" data-id="t2" /><label for="c37"
+                >Тест отключения питания (время сохраняется)</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c38" data-id="t3" /><label for="c38"
+                >Замер времени автономной работы от батареи</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c39" data-id="t4" /><label for="c39"
+                >Проверка механики: люфт, заедания, шум</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c40" data-id="t5" /><label for="c40"
+                >Дефекты исправлены</label
+              >
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Заметки -->
+      <section id="notes">
+        <h2><span class="chev">▾</span> 9. Заметки и итоги</h2>
+        <div class="body">
+          <ul class="check">
+            <li>
+              <input type="checkbox" id="c41" data-id="n1" /><label for="n1"
+                >Сохранены файлы: 3D-модель, схема, скетч</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c42" data-id="n2" /><label for="n2"
+                >Сделаны фото готового устройства</label
+              >
+            </li>
+            <li>
+              <input type="checkbox" id="c43" data-id="n3" /><label for="n3"
+                >Записан короткий отчёт по проекту</label
+              >
+            </li>
+          </ul>
+          <p class="note" style="margin-top: 12px">
+            Идеи на будущее: подсветка циферблата, кнопка установки времени,
+            второй циферблат.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        const KEY = "arduino-clock-progress-v1";
+        const boxes = Array.from(
+          document.querySelectorAll('input[type="checkbox"]'),
+        );
+        const fill = document.getElementById("barFill");
+        const pinfo = document.getElementById("pinfo");
+        const nav = document.getElementById("nav");
+
+        // ---- сохранение галочек ----
+        function load() {
+          let saved = {};
+          try {
+            saved = JSON.parse(localStorage.getItem(KEY) || "{}");
+          } catch (e) {}
+          boxes.forEach((b) => {
+            b.checked = !!saved[b.dataset.id];
+          });
+        }
+        function save() {
+          const o = {};
+          boxes.forEach((b) => {
+            o[b.dataset.id] = b.checked;
+          });
+          localStorage.setItem(KEY, JSON.stringify(o));
+        }
+        function refresh() {
+          let done = 0;
+          boxes.forEach((b) => {
+            const li = b.closest("li");
+            if (li) li.classList.toggle("done", b.checked);
+            if (b.checked) done++;
+          });
+          const total = boxes.length;
+          fill.style.width = (total ? (done / total) * 100 : 0) + "%";
+          pinfo.textContent =
+            "Выполнено " +
+            done +
+            " из " +
+            total +
+            " (" +
+            (total ? Math.round((done / total) * 100) : 0) +
+            "%)";
+        }
+        boxes.forEach((b) =>
+          b.addEventListener("change", () => {
+            save();
+            refresh();
+          }),
+        );
+
+        // ---- сворачивание разделов ----
+        document.querySelectorAll("section > h2").forEach((h) => {
+          h.addEventListener("click", () =>
+            h.parentElement.classList.toggle("collapsed"),
+          );
+        });
+
+        // ---- кнопка "развернуть всё / свернуть всё" ----
+        const allBtn = document.getElementById("allBtn");
+        allBtn.addEventListener("click", () => {
+          const sections = Array.from(document.querySelectorAll("section"));
+          const anyOpen = sections.some(
+            (s) => !s.classList.contains("collapsed"),
+          );
+          sections.forEach((s) => s.classList.toggle("collapsed", anyOpen));
+          allBtn.textContent = anyOpen ? "Развернуть всё" : "Свернуть всё";
+        });
+
+        // ---- меню ----
+        document
+          .getElementById("menuBtn")
+          .addEventListener("click", () => nav.classList.toggle("open"));
+        nav.addEventListener("click", (e) => {
+          if (e.target.tagName === "A") nav.classList.remove("open");
+        });
+
+        // ---- сброс ----
+        document.getElementById("resetBtn").addEventListener("click", () => {
+          if (!confirm("Сбросить весь прогресс?")) return;
+          boxes.forEach((b) => {
+            b.checked = false;
+          });
+          localStorage.removeItem(KEY);
+          refresh();
+        });
+
+        load();
+        refresh();
+      })();
+    </script>
+  </body>
+</html>
